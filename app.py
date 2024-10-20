@@ -12,6 +12,8 @@ from datetime import datetime  # Import datetime
 from reportlab.lib.utils import ImageReader
 from PIL import Image
 from io import BytesIO
+import bcrypt
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
@@ -24,6 +26,10 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # Initialize Livepeer SDK
 livepeer = Livepeer(http_bearer=os.getenv("LIVEPEER_API_KEY"))
+
+
+# Setup logger
+logging.basicConfig(filename='app.log', level=logging.ERROR)
 
 # Database setup
 DB_FILE = "stories.db"
@@ -68,11 +74,13 @@ def create_tables(conn):
             page_number INTEGER,
             text TEXT,
             image_url TEXT,
+            video_url TEXT,  -- Adding video URL column
             FOREIGN KEY (story_id) REFERENCES stories (id)
         )""")
         conn.commit()
     except Error as e:
         print(e)
+
 
 def fetch_stories():
     conn = create_connection()
@@ -80,9 +88,9 @@ def fetch_stories():
     if conn:
         try:
             cursor = conn.cursor()
-            # Assuming you want to join story details with image URLs
+            # Join story details with image and video URLs
             cursor.execute("""
-                SELECT s.id, s.prompt, s.num_pages, s.created_at, s.user_id, sp.image_url 
+                SELECT s.id, s.prompt, s.num_pages, s.created_at, s.user_id, sp.image_url, sp.video_url 
                 FROM stories s
                 LEFT JOIN story_pages sp ON s.id = sp.story_id
                 ORDER BY s.created_at DESC
@@ -95,13 +103,15 @@ def fetch_stories():
                     'num_pages': row[2],
                     'created_at': row[3],
                     'user_id': row[4],
-                    'image_url': row[5]  # Now fetching from story_pages
+                    'image_url': row[5],  # Fetching image URL
+                    'video_url': row[6]   # Fetching video URL
                 })
         except Error as e:
             print(f"Database error: {e}")
         finally:
             conn.close()
     return stories
+
 
 # Initialize database
 conn = create_connection()
@@ -311,15 +321,14 @@ class StoryGenerator:
 
 story_generator = StoryGenerator()
 
-# Decorator for requiring login
+# Custom login required decorator
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('login', next=request.url))
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
-
 
 
 @app.route('/')
@@ -339,7 +348,7 @@ def login():
                 cursor.execute("SELECT id, authcode FROM users WHERE username = ?", (username,))
                 user = cursor.fetchone()
                 
-                if user and user[1] in ['sg12@', 'sg99#'] and user[1] == authcode:
+                if user and bcrypt.checkpw(authcode.encode('utf-8'), user[1]):  # Verify the hashed authcode
                     session['user_id'] = user[0]
                     session['username'] = username
                     return redirect(url_for('index'))
@@ -349,6 +358,7 @@ def login():
                 conn.close()
         
     return render_template('login.html')
+
 
 @app.route('/logout')
 def logout():
@@ -362,18 +372,34 @@ def register():
         username = request.form['username']
         email = request.form['email']
         authcode = request.form['authcode']
+
+        # Basic validation for inputs
+        if not username or not email or not authcode:
+            flash('All fields are required')
+            return render_template('register.html')
         
+        if len(username) < 3:
+            flash('Username must be at least 3 characters long')
+            return render_template('register.html')
+
+        # Example email validation
+        if '@' not in email or '.' not in email.split('@')[-1]:
+            flash('Invalid email format')
+            return render_template('register.html')
+
+        # Only allow valid codes
         if authcode not in ['sg12@', 'sg99#']:
             flash('Invalid authcode. Contact admin for valid code')
-            #Invalid authcode. Must be either sg12@ or sg99#
             return render_template('register.html')
+
+        hashed_authcode = bcrypt.hashpw(authcode.encode('utf-8'), bcrypt.gensalt())  # Hash the authcode
         
         conn = create_connection()
         if conn is not None:
             try:
                 cursor = conn.cursor()
                 cursor.execute("INSERT INTO users (username, email, authcode) VALUES (?, ?, ?)",
-                               (username, email, authcode))
+                               (username, email, hashed_authcode))
                 conn.commit()
                 flash('Registration successful. Please log in.')
                 return redirect(url_for('login'))
@@ -450,24 +476,22 @@ def save_story():
     return jsonify({"success": False, "error": "Database connection error"})
 
 
+# In each error handling section, replace print with logging.error
 @app.route('/view_story/<story_id>')
 def view_story(story_id):
     conn = create_connection()
     if conn is not None:
         try:
             cursor = conn.cursor()
-            # Fetch the story details
             cursor.execute("SELECT id, prompt, num_pages, style_prompt, character_descriptions FROM stories WHERE id = ?", (story_id,))
             story = cursor.fetchone()
 
             if not story:
                 return jsonify({"error": "Story not found"}), 404
 
-            # Fetch the story pages (text and images)
             cursor.execute("SELECT text, image_url FROM story_pages WHERE story_id = ? ORDER BY page_number", (story_id,))
             pages = cursor.fetchall()
 
-            # Unpack story details
             story_data = {
                 "id": story[0],
                 "prompt": story[1],
@@ -476,10 +500,8 @@ def view_story(story_id):
                 "character_descriptions": story[4]
             }
 
-            # Combine page text and images into tuples
             zipped_story = [(page[0], page[1]) for page in pages]
 
-            # Pass the individual variables to the template
             return render_template(
                 'view_story.html',
                 prompt=story_data["prompt"],
@@ -489,7 +511,7 @@ def view_story(story_id):
                 zipped_story=zipped_story
             )
         except Error as e:
-            print(f"Error fetching story from database: {e}")
+            logging.error(f"Error fetching story from database: {e}")
             return jsonify({"error": "Error fetching story"}), 500
         finally:
             conn.close()
@@ -522,10 +544,10 @@ def fetch_story_pages(story_id):
 
 
 @app.route('/generate_video', methods=['GET'])
-@login_required  # Ensure the user is logged in
+@login_required
 def generate_video():
     story_id = request.args.get('story_id')
-    
+
     conn = create_connection()
     if conn is not None:
         try:
@@ -588,6 +610,7 @@ def storyboard():
 
     return render_template('storyboard.html', stories=stories)
 
+# Example in search route
 @app.route('/search', methods=['GET'])
 def search():
     query = request.args.get('query', '')  # Get the search query from the request
@@ -597,10 +620,9 @@ def search():
     if conn is not None:
         try:
             cursor = conn.cursor()
-            # Fetch stories that match the search query
             cursor.execute("SELECT id, prompt, num_pages, style_prompt, character_descriptions FROM stories WHERE prompt LIKE ?", ('%' + query + '%',))
             stories = cursor.fetchall()
-            # Prepare stories for rendering in the template
+
             stories_data = [{
                 "id": story[0],
                 "prompt": story[1],
@@ -611,11 +633,12 @@ def search():
             
             return render_template('search_results.html', query=query, stories=stories_data)
         except Error as e:
-            print(f"Error fetching stories from database: {e}")
+            logging.error(f"Error fetching stories from database: {e}")
         finally:
             conn.close()
 
     return render_template('search_results.html', query=query, stories=stories)
+
 
 
 if __name__ == '__main__':
