@@ -32,6 +32,7 @@ livepeer = Livepeer(http_bearer=os.getenv("LIVEPEER_API_KEY"))
 logging.basicConfig(filename='app.log', level=logging.ERROR)
 
 # Database setup
+# Database setup
 DB_FILE = "stories.db"
 stories = []
 
@@ -74,13 +75,11 @@ def create_tables(conn):
             page_number INTEGER,
             text TEXT,
             image_url TEXT,
-            video_url TEXT,  -- Adding video URL column
             FOREIGN KEY (story_id) REFERENCES stories (id)
         )""")
         conn.commit()
     except Error as e:
         print(e)
-
 
 def fetch_stories():
     conn = create_connection()
@@ -88,9 +87,9 @@ def fetch_stories():
     if conn:
         try:
             cursor = conn.cursor()
-            # Join story details with image and video URLs
+            # Assuming you want to join story details with image URLs
             cursor.execute("""
-                SELECT s.id, s.prompt, s.num_pages, s.created_at, s.user_id, sp.image_url, sp.video_url 
+                SELECT s.id, s.prompt, s.num_pages, s.created_at, s.user_id, sp.image_url 
                 FROM stories s
                 LEFT JOIN story_pages sp ON s.id = sp.story_id
                 ORDER BY s.created_at DESC
@@ -103,15 +102,13 @@ def fetch_stories():
                     'num_pages': row[2],
                     'created_at': row[3],
                     'user_id': row[4],
-                    'image_url': row[5],  # Fetching image URL
-                    'video_url': row[6]   # Fetching video URL
+                    'image_url': row[5]  # Now fetching from story_pages
                 })
         except Error as e:
             print(f"Database error: {e}")
         finally:
             conn.close()
     return stories
-
 
 # Initialize database
 conn = create_connection()
@@ -132,25 +129,25 @@ class StoryGenerator:
         try:
             # Generate the story text
             story_text = self._generate_text(prompt, num_pages)
-            yield json.dumps({"progress": 25})
+            yield json.dumps({"progress": 25})  # Indicate that text generation is complete
 
             # Generate a consistent style prompt
             style_prompt = self._generate_style_prompt(prompt)
-            yield json.dumps({"progress": 50})
+            yield json.dumps({"progress": 50})  # Indicate that style prompt generation is complete
 
             # Generate character descriptions
             character_descriptions = self._generate_character_descriptions(story_text)
-            yield json.dumps({"progress": 75})
+            yield json.dumps({"progress": 75})  # Indicate that character descriptions are complete
 
             # Save the story to the database first to get the story_id
             story_id = self.save_story_to_db(user_id, prompt, num_pages, style_prompt, character_descriptions, story_text)
 
-            # Generate images and videos for the story
-            image_paths, video_paths = self._generate_images_livepeer(story_text, style_prompt, character_descriptions, story_id)
-            yield json.dumps({"progress": 100})
+            # Generate images for the story using Livepeer with the consistent style and characters
+            image_paths = self._generate_images_livepeer(story_text, style_prompt, character_descriptions, story_id)
+            yield json.dumps({"progress": 100})  # Indicate that image generation is complete
 
-            # Update the story in the database with the generated image and video paths
-            self.update_story_images_in_db(story_id, image_paths, video_paths)
+            # Update the story in the database with the generated image paths
+            self.update_story_images_in_db(story_id, image_paths)
 
             # Yield the final story and image paths as a serializable object
             yield json.dumps({
@@ -158,7 +155,6 @@ class StoryGenerator:
                 "story_data": {
                     "story_text": story_text,
                     "image_paths": image_paths,
-                    "video_paths": video_paths,
                     "prompt": prompt,
                     "num_pages": len(story_text),
                     "style_prompt": style_prompt,
@@ -213,8 +209,7 @@ class StoryGenerator:
         except Exception as e:
             print(f"Error in _generate_character_descriptions: {e}")
             raise
-
-
+        
     def save_story_to_db(self, user_id, prompt, num_pages, style_prompt, character_descriptions, story_text):
         conn = create_connection()
         if conn is not None:
@@ -246,18 +241,30 @@ class StoryGenerator:
                 conn.close()
 
 
+    def update_story_images_in_db(self, story_id, image_paths):
+        conn = create_connection()
+        if conn is not None:
+            try:
+                cursor = conn.cursor()
+                for index, image_url in enumerate(image_paths):
+                    if image_url:  # Only update if the image_url is not None
+                        cursor.execute("UPDATE story_pages SET image_url = ? WHERE story_id = ? AND page_number = ?",
+                                    (image_url, story_id, index + 1))
+                conn.commit()
+            except Error as e:
+                print(f"Error updating story images in database: {e}")
+            finally:
+                conn.close()
 
     def _generate_images_livepeer(self, story_text, style_prompt, character_descriptions, story_id):
         image_paths = []
-        video_paths = []
-        conn = create_connection()
+        conn = create_connection()  # Create a database connection
         if conn is not None:
             try:
                 for index, page in enumerate(story_text):
                     retries = 3
                     for attempt in range(retries):
                         try:
-                            # Generate the image using text_to_image
                             res = self.livepeer.generate.text_to_image(request={
                                 "prompt": f"{style_prompt}\n{character_descriptions}\nIllustration for: {page[:100]}...",
                                 "model_id": "black-forest-labs/FLUX.1-dev",
@@ -268,24 +275,9 @@ class StoryGenerator:
                             if res.image_response is not None and res.image_response.images:
                                 image_url = res.image_response.images[0].url
                                 image_paths.append(image_url)
-
-                                # Convert the generated image to video using Livepeer's image_to_video
-                                video_res = self.livepeer.generate.image_to_video(request={
-                                    "image": {
-                                        "file_name": image_url.split('/')[-1],
-                                        "content": open(image_url, "rb"),
-                                    }
-                                })
-
-                                if video_res.video_response is not None:
-                                    video_url = video_res.video_response.url
-                                    video_paths.append(video_url)
-                                else:
-                                    video_paths.append(None)
                             else:
                                 print(f"Error generating image for page {index}: No image response")
                                 image_paths.append(None)
-                                video_paths.append(None)
                             break
                         except Exception as e:
                             print(f"Error generating image for page {index} on attempt {attempt + 1}: {e}")
@@ -293,30 +285,11 @@ class StoryGenerator:
                                 time.sleep(2)
                             else:
                                 image_paths.append(None)
-                                video_paths.append(None)
             except Error as e:
                 print(f"Error saving images to database: {e}")
             finally:
                 conn.close()
-        return image_paths, video_paths
-    
-
-    def update_story_images_in_db(self, story_id, image_paths, video_paths):
-        conn = create_connection()
-        if conn is not None:
-            try:
-                cursor = conn.cursor()
-                for index, (image_url, video_url) in enumerate(zip(image_paths, video_paths)):
-                    cursor.execute("""
-                        UPDATE story_pages SET image_url = ?, video_url = ? 
-                        WHERE story_id = ? AND page_number = ?
-                    """, (image_url, video_url, story_id, index + 1))
-                conn.commit()
-            except Error as e:
-                print(f"Error updating story images in database: {e}")
-            finally:
-                conn.close()
-
+        return image_paths
 
 
 story_generator = StoryGenerator()
