@@ -1,0 +1,8 @@
+story_generator/
+│
+├── app.py
+├── templates/
+│   └── index.html
+├── static/
+│   └── styles.css
+└── requirements.txt

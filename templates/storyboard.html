@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Children's Stories Storyboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header with title and search button -->
+         <!-- User Welcome Message -->
+        <div class="mb-6 text-right">
+            {% if 'user_id' in session %}
+                <p class="text-sm text-gray-600">Welcome, {{ session['username'] }}! <a href="{{ url_for('logout') }}" class="text-indigo-600 hover:underline">Logout</a></p>
+            {% else %}
+                <p class="text-sm text-gray-600">
+                    <a href="{{ url_for('login') }}" class="text-indigo-600 hover:underline">Login</a> | 
+                    <a href="{{ url_for('register') }}" class="text-indigo-600 hover:underline">Register</a>
+                </p>
+            {% endif %}
+        </div>
+        
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-indigo-600">Generated Stories</h1>
+            <form action="{{ url_for('search') }}" method="GET" class="flex items-center">
+                <input type="text" name="query" placeholder="Search stories..." class="border border-gray-300 rounded-md py-2 px-4 text-sm focus:outline-none focus:border-indigo-600">
+                <button type="submit" class="ml-2 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-300 ease-in-out">Search</button>
+            </form>
+            
+        </div>
+        
+        <!-- Horizontal scrolling story list -->
+        <div class="relative">
+            <!-- Horizontal scroll button (left) -->
+            <button id="scrollLeft" class="absolute left-0 top-1/2 transform -translate-y-1/2 bg-gray-300 text-gray-800 p-2 rounded-full shadow-md focus:outline-none hover:bg-gray-400">
+                &larr;
+            </button>
+
+            <!-- Story container with horizontal scrolling -->
+            <div id="storyContainer" class="flex overflow-x-auto space-x-6 p-4">
+                {% for story in stories %}
+                    <div class="flex-shrink-0 bg-white rounded-lg shadow-md overflow-hidden transition duration-300 ease-in-out transform hover:-translate-y-1 hover:shadow-lg w-64">
+                        <img class="w-full h-48 object-cover" src="{{ story['image_url'] }}" alt="Story Image">
+                        <div class="p-4">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2 truncate">{{ story['prompt'] }}</h3>
+                            <p class="text-sm text-gray-600 mb-1">Pages: {{ story['num_pages'] }}</p>
+                            <p class="text-sm text-gray-600 mb-1">Created: {{ story['created_at'] }}</p>
+                            <p class="text-sm text-gray-600 mb-2">By: User {{ story['user_id'] }}</p>
+                            <a href="{{ url_for('view_story', story_id=story['id']) }}" class="inline-block bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition duration-300 ease-in-out">View Story</a>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="col-span-full text-center text-gray-600 text-lg">No stories generated yet. Create your first story!</p>
+                {% endfor %}
+            </div>
+
+            <!-- Horizontal scroll button (right) -->
+            <button id="scrollRight" class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-300 text-gray-800 p-2 rounded-full shadow-md focus:outline-none hover:bg-gray-400">
+                &rarr;
+            </button>
+        </div>
+
+        <!-- Generate New Story Button -->
+        <div class="mt-12 text-center">
+            <a href="{{ url_for('index') }}" class="inline-block bg-green-500 text-white py-3 px-6 rounded-md hover:bg-green-600 transition duration-300 ease-in-out text-lg font-semibold">
+                Generate New Story
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript for horizontal scrolling
+        const scrollContainer = document.getElementById('storyContainer');
+        const scrollLeftButton = document.getElementById('scrollLeft');
+        const scrollRightButton = document.getElementById('scrollRight');
+
+        scrollLeftButton.addEventListener('click', () => {
+            scrollContainer.scrollBy({ left: -300, behavior: 'smooth' });
+        });
+
+        scrollRightButton.addEventListener('click', () => {
+            scrollContainer.scrollBy({ left: 300, behavior: 'smooth' });
+        });
+    </script>
+</body>
+</html>

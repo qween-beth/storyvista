@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Story</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
+        <h1 class="text-3xl font-bold mb-6 text-center text-indigo-600">Generated Story</h1>
+        
+        <div class="mb-6">
+            <p class="text-lg font-semibold"><strong>Prompt:</strong> {{ prompt }}</p>
+        </div>
+
+        <div class="mb-4">
+            <button onclick="toggleSection('artStyle')" class="w-full text-left bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">
+                Toggle Art Style
+            </button>
+            <div id="artStyle" style="display:none;" class="p-4 border border-gray-300 rounded-md bg-gray-50">
+                <h2 class="text-2xl font-semibold mb-4">Art Style</h2>
+                <p class="text-gray-700 mb-6">{{ style_prompt }}</p>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <button onclick="toggleSection('characterDescriptions')" class="w-full text-left bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">
+                Toggle Character Descriptions
+            </button>
+            <div id="characterDescriptions" style="display:none;" class="p-4 border border-gray-300 rounded-md bg-gray-50">
+                <h2 class="text-2xl font-semibold mb-4">Character Descriptions</h2>
+                <p class="text-gray-700 mb-6">{{ character_descriptions }}</p>
+            </div>
+        </div>
+
+        <p class="text-lg font-semibold mb-4"><strong>Number of Pages:</strong> {{ num_pages }}</p>
+
+        {% if zipped_story|length == 0 %}
+            <p class="text-red-500">No pages found for this story.</p>
+        {% else %}
+            <div class="mb-4">
+                <button onclick="toggleSection('pages')" class="w-full text-left bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">
+                    Toggle Pages
+                </button>
+                <div id="pages" style="display:none;">
+                    {% for page_text, image_url in zipped_story %}
+                        <div class="story-page mb-6 p-4 border border-gray-300 rounded-md bg-gray-50">
+                            <h3 class="text-xl font-semibold mb-2">Page {{ loop.index }}</h3>
+                            <p class="text-gray-800 mb-2">{{ page_text }}</p>
+                            
+                            {% if image_url %}
+                                <img src="{{ image_url }}" alt="Illustration for page {{ loop.index }}" class="rounded-md shadow-md w-full h-auto object-cover mb-4">
+                            {% else %}
+                                <p class="text-gray-500">No image available for this page.</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+        
+        <div class="flex justify-between mt-6">
+            <button id="prevButton" onclick="previousPage()" class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50" style="display: none;">
+                Previous Page
+            </button>
+            <button id="nextButton" onclick="nextPage()" class="bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                Next Page
+            </button>
+        </div>
+
+        <!-- Button to trigger video generation -->
+        <div class="mt-8 text-center">
+            <button onclick="generateVideo()" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                Generate Video from Story
+            </button>
+        </div>
+
+        <!-- Video section (initially hidden) -->
+        <div id="video-section" class="mt-8" style="display:none;" class="text-center">
+            <h2 class="text-2xl font-semibold mb-4">Generated Video</h2>
+            <video controls id="story-video" class="w-full h-auto border border-gray-300 rounded-md">
+                <source src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+
+        <div class="flex justify-center mt-6 space-x-4">
+            <!-- Button to generate another story -->
+            <a href="{{ url_for('index') }}" class="inline-block bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
+                Generate Another Story
+            </a>
+        
+            <!-- Button to go to the storyboard -->
+            <a href="{{ url_for('storyboard') }}" class="inline-block bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
+                View Storyboard
+            </a>
+        </div>
+        
+    </div>
+
+    <script>
+        let currentPage = 0; // Start at the first page
+        let totalPages = {{ num_pages }}; // Total number of pages
+
+        function showPage(pageIndex) {
+            const pages = document.querySelectorAll('.story-page');
+            pages.forEach((page, index) => {
+                page.style.display = (index === pageIndex) ? 'block' : 'none'; // Show only the current page
+            });
+            currentPage = pageIndex; // Update the current page index
+            updateButtons(); // Update button visibility
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages - 1) {
+                showPage(currentPage + 1);
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 0) {
+                showPage(currentPage - 1);
+            }
+        }
+
+        function updateButtons() {
+            document.getElementById('prevButton').style.display = (currentPage === 0) ? 'none' : 'inline-block';
+            document.getElementById('nextButton').style.display = (currentPage === totalPages - 1) ? 'none' : 'inline-block';
+        }
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            if (section.style.display === 'none' || section.style.display === '') {
+                section.style.display = 'block';
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            showPage(currentPage); // Show the first page on load
+        });
+
+        // Video generation logic
+        function generateVideo() {
+            const storyId = "{{ story_id }}"; // Pass the story ID dynamically if available
+
+            fetch(`/generate_video?story_id=${storyId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Unknown error');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Show the generated video URL or embed it
+                        alert(`Video generated: ${data.video_url}`);
+                        const videoContainer = document.createElement('div');
+                        videoContainer.innerHTML = `
+                            <video width="600" controls>
+                                <source src="${data.video_url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>`;
+                        document.body.appendChild(videoContainer);
+                    } else {
+                        alert(`Error: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    alert(`Error generating video: ${error.message}`);
+                });
+        }
+
+    </script>
+</body>
+</html>

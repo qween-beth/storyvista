@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Children's Story Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        #progress-bar {
+            width: 100%;
+            background-color: #f0f0f0;
+            padding: 3px;
+            border-radius: 3px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, .2);
+            display: none;
+        }
+        #progress-bar-fill {
+            display: block;
+            height: 22px;
+            background-color: #659cef;
+            border-radius: 3px;
+            transition: width 500ms ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Children's Story Generator</h1>
+    <form id="story-form">
+        <input type="text" id="prompt" name="prompt" placeholder="Enter story prompt" required>
+        <input type="number" id="num_pages" name="num_pages" min="1" max="10" value="3" required>
+        <button type="submit" id="generate-btn">Generate Story</button>
+    </form>
+    <div id="progress-bar">
+        <span id="progress-bar-fill"></span>
+    </div>
+    <div id="progress-text"></div>
+
+    <script>
+        const form = document.getElementById('story-form');
+        const generateBtn = document.getElementById('generate-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const progressText = document.getElementById('progress-text');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Processing...';
+            progressBar.style.display = 'block';
+            progressText.textContent = 'Starting story generation...';
+
+            const prompt = document.getElementById('prompt').value;
+            const numPages = document.getElementById('num_pages').value;
+            
+            const eventSource = new EventSource(`/generate_story?prompt=${encodeURIComponent(prompt)}&num_pages=${numPages}`);
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.progress) {
+                    const progress = data.progress;
+                    progressBarFill.style.width = `${progress}%`;
+                    progressText.textContent = `Generating story: ${progress}% complete`;
+                }
+                if (data.redirect) {
+                    eventSource.close();
+                    window.location.href = data.redirect;
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('EventSource failed:', error);
+                eventSource.close();
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Story';
+                progressBar.style.display = 'none';
+                progressText.textContent = 'An error occurred. Please try again.';
+            };
+        });
+    </script>
+</body>
+</html>
+

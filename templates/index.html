@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Children's Story Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        #progress-bar {
+            display: none;
+        }
+        #progress-bar-fill {
+            height: 22px;
+            background-color: #659cef;
+            border-radius: 3px;
+            transition: width 500ms ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+
+        <!-- User Welcome Message -->
+        <div class="mb-6 text-right">
+            {% if 'user_id' in session %}
+                <p class="text-sm text-gray-600">Welcome, {{ session['username'] }}! <a href="{{ url_for('logout') }}" class="text-indigo-600 hover:underline">Logout</a></p>
+            {% else %}
+                <p class="text-sm text-gray-600">
+                    <a href="{{ url_for('login') }}" class="text-indigo-600 hover:underline">Login</a> | 
+                    <a href="{{ url_for('register') }}" class="text-indigo-600 hover:underline">Register</a>
+                </p>
+            {% endif %}
+        </div>
+        
+
+        <h1 class="text-3xl font-bold mb-6 text-center text-indigo-600">AI Children's Story Generator</h1>
+        
+        {% if 'user_id' in session %}
+            <form id="story-form" class="space-y-4">
+                <input type="text" id="prompt" name="prompt" placeholder="Enter story prompt" required class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <input type="number" id="num_pages" name="num_pages" min="1" max="10" value="3" required class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button type="submit" id="generate-btn" class="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">Generate Story</button>
+            </form>
+            
+            <div id="progress-bar" class="mt-4">
+                <div id="progress-bar-fill" class="bg-indigo-600 rounded-md"></div>
+            </div>
+            <div id="progress-text" class="mt-2 text-center text-gray-700"></div>
+        {% else %}
+            <p class="text-center text-gray-700 mb-4">Please log in to generate stories.</p>
+        {% endif %}
+        
+        <div class="mt-4 text-center">
+            <a href="{{ url_for('storyboard') }}" class="text-indigo-600 hover:underline">View Storyboard</a>
+        </div>
+    </div>
+
+    {% if 'user_id' in session %}
+    <script>
+        const form = document.getElementById('story-form');
+        const generateBtn = document.getElementById('generate-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const progressText = document.getElementById('progress-text');
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Processing...';
+            progressBar.style.display = 'block';
+            progressText.textContent = 'Starting story generation...';
+
+            const prompt = document.getElementById('prompt').value;
+            const numPages = document.getElementById('num_pages').value;
+            
+            const eventSource = new EventSource(`/generate_story?prompt=${encodeURIComponent(prompt)}&num_pages=${numPages}`);
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                if (data.progress) {
+                    const progress = data.progress;
+                    progressBarFill.style.width = `${progress}%`;
+                    progressText.textContent = `Generating story: ${progress}% complete`;
+                }
+                if (data.complete) {
+                    eventSource.close();
+                    saveStory(data.story_data);
+                }
+                if (data.error) {
+                    eventSource.close();
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Story';
+                    progressBar.style.display = 'none';
+                    progressText.textContent = `Error: ${data.error}`;
+                }
+            };
+
+            eventSource.onerror = function(error) {
+                console.error('EventSource failed:', error);
+                eventSource.close();
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Story';
+                progressBar.style.display = 'none';
+                progressText.textContent = 'An error occurred. Please try again.';
+            };
+        });
+
+        function saveStory(storyData) {
+            fetch('/save_story', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(storyData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    progressText.textContent = 'Error: Failed to save story';
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Story';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                progressText.textContent = 'Error: Failed to save story';
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Story';
+            });
+        }
+    </script>
+    {% endif %}
+</body>
+</html>

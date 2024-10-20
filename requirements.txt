@@ -1,0 +1,8 @@
+flask
+openai
+pillow
+requests
+python-dotenv
+livepeer_ai
+celery 
+redis

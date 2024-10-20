@@ -1,0 +1,70 @@
+Generator update: {"complete": true, "story_data": {"story_text": ["Title: Sunny 
+Day in Villa\n\nOnce upon a time, in a beautiful villa nestled among the rolling 
+hills, lived a young girl named Lily. The sun was shining brightly in the clear blue sky, casting a warm glow over the lush green gardens that surrounded the villa. Lily skipped happily in the garden, her red hair bouncing in the breeze as she chased after colorful butterflies. Birds chirped merrily in the trees, adding a 
+joyful melody to the serene atmosphere of the villa. Everything seemed so peaceful and perfect on this sunny day.\n\n", "\n\nAs Lily wandered further into the garden, she came across a small pond shimmering in the sunlight. Dragonflies flitted above the water's surface, creating ripples that danced in the gentle breeze. Lily knelt down by the pond and watched the fish swimming gracefully beneath the lily pads. The water was so clear that she could see her reflection staring back at her, her eyes filled with wonder and excitement. She dipped her hand into the cool water, feeling the refreshing sensation on her skin. The villa's garden was truly a magical place, full of beauty and serenity.\n\n", "\n\nAs the day drew to a close, Lily sat on a swing hanging from a sturdy tree branch, watching the sun slowly dip below the horizon, painting the sky in hues of orange and pink. The villa's garden was bathed in a soft golden light, casting long shadows on the emerald grass. Lily listened to the gentle rustling of leaves in the breeze and the distant chirping of crickets as night approached. She felt grateful for the peaceful day she had spent in the villa, surrounded by nature's beauty and tranquility. With a contented sigh, Lily closed her eyes, cherishing the memories of this sunny day in the villa.\n\n"], "image_paths": ["/static/images/0.png", "/static/images/1.png", "/static/images/2.png"], "prompt": "Sunny day in Villa", "num_pages": 3}}
+Session data set: {'story_text': ['Title: Sunny Day in Villa\n\nOnce upon a time, in a beautiful villa nestled among the rolling hills, lived a young girl named Lily. The sun was shining brightly in the clear blue sky, casting a warm glow over the lush green gardens that surrounded the villa. Lily skipped happily in the garden, her red hair bouncing in the breeze as she chased after colorful butterflies. Birds chirped merrily in the trees, adding a joyful melody to the serene atmosphere of the villa. Everything seemed so peaceful and perfect on this sunny day.\n\n', "\n\nAs Lily wandered further into the garden, she came across a small pond shimmering in the sunlight. Dragonflies flitted above the water's surface, creating ripples that danced in the gentle breeze. Lily knelt down by the pond and watched the fish swimming gracefully beneath the lily pads. The water was so clear that she could see her reflection staring back at her, her eyes filled with wonder and excitement. She dipped her hand into the cool water, feeling the refreshing 
+sensation on her skin. The villa's garden was truly a magical place, full of beauty and serenity.\n\n", "\n\nAs the day drew to a close, Lily sat on a swing hanging from a sturdy tree branch, watching the sun slowly dip below the horizon, painting the sky in hues of orange and pink. The villa's garden was bathed in a soft 
+golden light, casting long shadows on the emerald grass. Lily listened to the gentle rustling of leaves in the breeze and the distant chirping of crickets as night approached. She felt grateful for the peaceful day she had spent in the villa, 
+surrounded by nature's beauty and tranquility. With a contented sigh, Lily closed her eyes, cherishing the memories of this sunny day in the villa.\n\n"], 'image_paths': ['/static/images/0.png', '/static/images/1.png', '/static/images/2.png'], 'prompt': 'Sunny day in Villa', 'num_pages': 3}
+127.0.0.1 - - [11/Oct/2024 22:46:09] "POST /save_story HTTP/1.1" 200 -
+127.0.0.1 - - [11/Oct/2024 22:46:09] "GET /view_story HTTP/1.1" 500 -
+Traceback (most recent call last):
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\flask\app.py", line 1498, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\flask\app.py", line 1476, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\app.py", line 134, in view_story
+    return render_template('view_story.html', story=zipped_story)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\flask\templating.py", line 150, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\flask\templating.py", line 131, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\jinja2\environment.py", line 1304, in render
+    self.environment.handle_exception()
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\jinja2\environment.py", line 939, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\templates\view_story.html", line 18, in top-level template code
+    {% for page, image in zip(story.story_text, story.image_paths) %}
+  File "C:\Users\Princess Chayil\Desktop\Story Generator App\venv\Lib\site-packages\jinja2\utils.py", line 83, in from_obj
+    if hasattr(obj, "jinja_pass_arg"):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jinja2.exceptions.UndefinedError: 'zip' is undefined
+127.0.0.1 - - [11/Oct/2024 22:46:09] "GET /view_story?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1" 304 -
+127.0.0.1 - - [11/Oct/2024 22:46:09] "GET /view_story?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1" 304 -
+127.0.0.1 - - [11/Oct/2024 22:46:10] "GET /view_story?__debugger__=yes&cmd=resource&f=console.png&s=IDTnXcKDJOV4BRVBPbHB HTTP/1.1" 200 -
+127.0.0.1 - - [11/Oct/2024 22:46:10] "GET /view_story?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 304 -
+ * Detected change in 'C:\\Users\\Princess Chayil\\Desktop\\Story Generator App\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 106-525-232
+127.0.0.1 - - [11/Oct/2024 22:48:29] "GET /view_story HTTP/1.1" 302 -
+127.0.0.1 - - [11/Oct/2024 22:48:29] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [11/Oct/2024 22:48:29] "GET /static/styles.css HTTP/1.1" 304 -
+Generating story with prompt: Ada loves maths, num_pages: 2
+127.0.0.1 - - [11/Oct/2024 22:49:24] "GET /generate_story?prompt=Ada%20loves%20maths&num_pages=2 HTTP/1.1" 200 -
+Generator update: {"progress": 50}
+Generator update: {"progress": 100}
+Generator update: {"complete": true, "story_data": {"story_text": ["Ada was a little girl who loved numbers more than anything else in the world. While other kids played with dolls and cars, Ada was always busy solving math problems in her head. She loved the way numbers danced around in her mind, forming patterns and equations that she could solve with ease. Ada would spend hours at her desk, surrounded by sheets of paper filled with calculations and equations, her eyes sparkling 
+with excitement.\n\n", "\n\nOne day, Ada's school announced a math competition, and Ada could not contain her excitement. She spent days practicing and sharpening her skills until she was solving problems quicker than anyone else in her class. The day of the competition arrived, and Ada stood on stage, surrounded by her classmates and teachers. As the questions were read out loud, Ada's eyes lit up with determination, and she tackled each one with precision and speed. And when the 
+results were announced, everyone gasped in amazement as Ada was declared the winner, with a smile that stretched from ear to ear.\n\n"], "image_paths": ["/static/images/0.png", "/static/images/1.png"], "prompt": "Ada loves maths", "num_pages": 2}}
+Session data set: {'story_text': ['Ada was a little girl who loved numbers more than anything else in the world. While other kids played with dolls and cars, Ada 
+was always busy solving math problems in her head. She loved the way numbers danced around in her mind, forming patterns and equations that she could solve with ease. Ada would spend hours at her desk, surrounded by sheets of paper filled with calculations and equations, her eyes sparkling with excitement.\n\n', "\n\nOne day, Ada's school announced a math competition, and Ada could not contain her excitement. She spent days practicing and sharpening her skills until she was solving problems quicker than anyone else in her class. The day of the competition arrived, and Ada stood on stage, surrounded by her classmates and teachers. As the questions were read out loud, Ada's eyes lit up with determination, and she tackled 
+each one with precision and speed. And when the results were announced, everyone 
+gasped in amazement as Ada was declared the winner, with a smile that stretched from ear to ear.\n\n"], 'image_paths': ['/static/images/0.png', '/static/images/1.png'], 'prompt': 'Ada loves maths', 'num_pages': 2}
