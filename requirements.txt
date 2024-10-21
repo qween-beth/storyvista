@@ -8,3 +8,6 @@ celery
 redis
 gunicorn
 uvicorn
+reportlab
+sqlite
+bcrypt
