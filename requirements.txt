@@ -6,3 +6,5 @@ python-dotenv
 livepeer_ai
 celery 
 redis
+gunicorn
+uvicorn
