@@ -12,6 +12,7 @@
         
         <div class="mb-6">
             <p class="text-lg font-semibold"><strong>Prompt:</strong> {{ prompt }}</p>
+            <p class="text-sm text-gray-600 mb-2">By: {{ creator_name }}</p> <!-- Display the creator's name -->
         </div>
 
         <div class="mb-4">
@@ -144,37 +145,38 @@
 
         // Video generation logic
         function generateVideo() {
-            const storyId = "{{ story_id }}"; // Pass the story ID dynamically if available
+        const storyId = "{{ story_id }}";
+        const generateButton = document.querySelector('button[onclick="generateVideo()"]');
+        const videoSection = document.getElementById('video-section');
+        const storyVideo = document.getElementById('story-video');
 
-            fetch(`/generate_video?story_id=${storyId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.error || 'Unknown error');
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Show the generated video URL or embed it
-                        alert(`Video generated: ${data.video_url}`);
-                        const videoContainer = document.createElement('div');
-                        videoContainer.innerHTML = `
-                            <video width="600" controls>
-                                <source src="${data.video_url}" type="video/mp4">
-                                Your browser does not support the video tag.
-                            </video>`;
-                        document.body.appendChild(videoContainer);
-                    } else {
-                        alert(`Error: ${data.error}`);
-                    }
-                })
-                .catch(error => {
-                    alert(`Error generating video: ${error.message}`);
-                });
-        }
+        generateButton.disabled = true;
+        generateButton.textContent = 'Generating Video...';
 
-    </script>
+        fetch(`/generate_video?story_id=${storyId}`)
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Unknown error');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    storyVideo.src = data.video_url;
+                    videoSection.style.display = 'block';
+                    generateButton.textContent = 'Video Generated';
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            })
+            .catch(error => {
+                alert(`Error generating video: ${error.message}`);
+                generateButton.textContent = 'Generate Video';
+                generateButton.disabled = false;
+            });
+    }
+</script>
 </body>
 </html>
